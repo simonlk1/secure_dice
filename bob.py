@@ -1,66 +1,49 @@
-import rsa
 import socket
 import ssl
-from shared import ALICE_PORT, G, G, H, HOST, PORT, agree_on_roll, generate_dice_roll
+from shared import Q, G, H, HOST, MESSAGE_DELIMITER, PORT, agree_on_roll, generate_dice_roll, verify_commit
 
-with open('alice.public.pem', mode='rb') as alicepublicfile:
-    keydata = alicepublicfile.read()
-
-alicepub = rsa.PublicKey.load_pkcs1(keydata)
-
-with open('bob.private.pem', mode='rb') as bobprivatefile:
-    keydata = bobprivatefile.read()
-
-bobpriv = rsa.PrivateKey.load_pkcs1(keydata)
 
 def connect():
-    host = HOST
-    port = PORT
-
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.vertify_mode = ssl.CERT_REQUIRED
 
-    client = socket.create_connection((host, port))
-    tls = context.wrap_socket(client)
+    context.load_cert_chain("bob.tls.cert.pem", "bob.tls.key.pem")
+    context.load_verify_locations("alice.tls.cert.pem")
 
-    serverCertificate = tls.getpeercert()
-    print(f"Certificate obtained from the Alice? {serverCertificate != None}")
+    client = socket.create_connection((HOST, PORT))
+    tls = context.wrap_socket(client, server_hostname="alice")
 
-    hShake = tls.do_handshake()
-    print(f"Handshake done: {hShake == None}")
+    tls.do_handshake()
 
-    a, b, c = tls.cipher()
-    print('TLS cipher: ', a, ", ", b,", ", c)
+    print("Connected to Alice at address", HOST, "port", PORT)
 
-    print("\n------------------ Connection established, die rolling begins ------------------\n")
+    alices_commitment = tls.recv(1024).decode()
 
-    message = "Hi Alice"
-    tls.send(message.encode())
-    
-    alice_commitment = tls.recv(1024).decode()
+    print('Received Alice\'s commitment:', alices_commitment)
 
-    print('Received Alice\'s commitment: ' + alice_commitment)
-    
-    print("Sampling a random bit...")
-    random_bit = generate_dice_roll()
-    tls.send(str(random_bit).encode())
+    print("Rolling my dice")
+    roll = generate_dice_roll()
 
-    print("Waiting for Alice's message and random number...")
-    opening = tls.recv(1024).decode()
-    print("Alice's numbers are: " + opening)
-    
-    alice_data = opening.split(",")
-    alice_sampled_bit = int(alice_data[0])
-    alice_chosen = int(alice_data[1])
+    print("I rolled", roll)
 
-    if alice_commitment == str((G**alice_sampled_bit) * (H**alice_chosen)):
-        print("Alice's commitment: VALID")
-        dice_roll = str(agree_on_roll(alice_sampled_bit, random_bit))
-        print("The aggreeded dice roll is: " + dice_roll)
-        print("Bye")
+    tls.send(str(roll).encode())
+
+    print("Waiting for Alice's roll and random number")
+
+    [alice_roll, alice_r] = tls.recv(1024).decode().split(MESSAGE_DELIMITER)
+
+    print("Alice rolled", alice_roll, "with random value r of", alice_r)
+
+    if verify_commit(Q, G, H, int(alice_r), int(alice_roll), int(alices_commitment)):
+        print("Alice's commitment seems valid")
+        dice_roll = agree_on_roll(int(alice_roll), roll)
+        print("We have agreed on the dice roll", dice_roll)
 
     else:
-        print("Alice's commitment: INVALID")
-        tls.close()
+        print("Alice's commitment seems invalid")
 
-    
     tls.close()
+
+
+if __name__ == '__main__':
+    connect()

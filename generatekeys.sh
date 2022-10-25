@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 
 for name in "alice" "bob"; do
-    openssl genrsa -out $name.private.pem 4096
-    pyrsa-priv2pub -i $name.private.pem -o $name.public.pem
+    # generate 4096-bit certificates for tls
+    openssl req \
+        -x509 \
+        -newkey rsa:4096 \
+        -keyout "$name.tls.key.pem" \
+        -out "$name.tls.cert.pem" \
+        -sha256 \
+        -days 365 \
+        -nodes \
+        -subj "//CN=$name" \
+        -addext "subjectAltName = DNS:localhost,DNS:$name"
 done
