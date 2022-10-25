@@ -1,6 +1,6 @@
 import socket
 import ssl
-from shared import G, H, HOST, MESSAGE_DELIMITER, PORT, Q, agree_on_roll, generate_commit, generate_dice_roll, verify_commit
+from shared import Q, G, H, HOST, MESSAGE_DELIMITER, PORT, agree_on_roll, generate_commit, generate_dice_roll, verify_commit
 
 
 def serve():
