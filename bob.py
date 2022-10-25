@@ -1,6 +1,6 @@
 import socket
 import ssl
-from shared import Q, G, H, HOST, MESSAGE_DELIMITER, PORT, agree_on_roll, generate_dice_roll, verify_commit
+from shared import Q, G, H, HOST, MESSAGE_DELIMITER, PORT, agree_on_roll, generate_commit, generate_dice_roll, verify_commit
 
 
 def connect():
@@ -14,29 +14,38 @@ def connect():
     tls = context.wrap_socket(client, server_hostname="alice")
 
     tls.do_handshake()
+    connection = tls
 
     print("Connected to Alice at address", HOST, "port", PORT)
 
-    alices_commitment = tls.recv(1024).decode()
+    alices_commitment = connection.recv(1024).decode()
 
     print('Received Alice\'s commitment:', alices_commitment)
 
-    print("Rolling my dice")
+    print("Rolling my dice and committing it")
     roll = generate_dice_roll()
+    c, r = generate_commit(roll)
 
-    print("I rolled", roll)
+    print("My roll is", roll, "\nMy commitment is",
+          c, "\nMy random random value r is", r)
 
-    tls.send(str(roll).encode())
+    print("Sending my commitment")
 
-    print("Waiting for Alice's roll and random number")
+    connection.send(str(c).encode())
 
-    [alice_roll, alice_r] = tls.recv(1024).decode().split(MESSAGE_DELIMITER)
+    [alices_roll, alices_r] = connection.recv(
+        1024).decode().split(MESSAGE_DELIMITER)
 
-    print("Alice rolled", alice_roll, "with random value r of", alice_r)
+    print("Alice rolled", alices_roll, "with random value r of", alices_r)
 
-    if verify_commit(Q, G, H, int(alice_r), int(alice_roll), int(alices_commitment)):
+    commitmentMsg = str(roll) + MESSAGE_DELIMITER + str(r)
+    print("Sending my message and random number to Alice")
+
+    connection.send(commitmentMsg.encode())
+
+    if verify_commit(Q, G, H, int(alices_r), int(alices_roll), int(alices_commitment)):
         print("Alice's commitment seems valid")
-        dice_roll = agree_on_roll(int(alice_roll), roll)
+        dice_roll = agree_on_roll(int(alices_roll), roll)
         print("We have agreed on the dice roll", dice_roll)
 
     else:

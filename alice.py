@@ -1,6 +1,6 @@
 import socket
 import ssl
-from shared import HOST, MESSAGE_DELIMITER, PORT, agree_on_roll, generate_commit, generate_dice_roll
+from shared import G, H, HOST, MESSAGE_DELIMITER, PORT, Q, agree_on_roll, generate_commit, generate_dice_roll, verify_commit
 
 
 def serve():
@@ -39,16 +39,26 @@ def serve():
 
     connection.send(str(c).encode())
 
-    bobs_roll = connection.recv(1024).decode()
-    print("Recieved Bob\'s roll of", bobs_roll)
+    bobs_commitment = connection.recv(1024).decode()
+    print("Recieved Bob\'s commitment of", bobs_commitment)
 
     commitmentMsg = str(roll) + MESSAGE_DELIMITER + str(r)
     print("Sending my message and random number to Bob")
 
     connection.send(commitmentMsg.encode())
 
-    dice_roll = str(agree_on_roll(roll, int(bobs_roll)))
-    print("We have agreed on the dice roll", dice_roll)
+    [bobs_roll, bobs_r] = connection.recv(
+        1024).decode().split(MESSAGE_DELIMITER)
+
+    print("Bob rolled", bobs_roll, "with random value r of", bobs_r)
+
+    if verify_commit(Q, G, H, int(bobs_r), int(bobs_roll), int(bobs_commitment)):
+        print("Bob's commitment seems valid")
+        dice_roll = agree_on_roll(roll, int(bobs_roll))
+        print("We have agreed on the dice roll", dice_roll)
+
+    else:
+        print("Bob's commitment seems invalid")
 
 
 if __name__ == '__main__':

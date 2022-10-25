@@ -1,23 +1,28 @@
 --- ALICE OUTPUT ---
 
 Awaiting connection
-Connection from: ('127.0.0.1', 57370)
+Connection from: ('127.0.0.1', 58462)
 Rolling my dice and committing it
-My roll is 3
-My commitment is 37351
-My random random value r is 48727
+My roll is 4
+My commitment is 96807
+My random random value r is 20543
 Sending my commitment
-Recieved Bob's roll of 2
+Recieved Bob's commitment of 30708
 Sending my message and random number to Bob
-We have agreed on the dice roll 6
+Bob rolled 2 with random value r of 2171
+Bob's commitment seems valid
+We have agreed on the dice roll 1
 
 --- BOB OUTPUT ---
 
 Connected to Alice at address localhost port 24442
-Received Alice's commitment: 11202
-Rolling my dice
-I rolled 1
-Waiting for Alice's roll and random number
-Alice rolled 4 with random value r of 59830
+Received Alice's commitment: 96807
+Rolling my dice and committing it
+My roll is 2
+My commitment is 30708
+My random random value r is 2171
+Sending my commitment
+Alice rolled 4 with random value r of 20543
+Sending my message and random number to Alice
 Alice's commitment seems valid
-We have agreed on the dice roll 6
+We have agreed on the dice roll 1
